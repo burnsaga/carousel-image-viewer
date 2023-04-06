@@ -1,11 +1,12 @@
 from tkinter import *
 from PIL import Image, ImageTk
 
+
 class ImageViewer:
-    def __init__(self, root, images):
+    def __init__(self, root, images, show_seams=True):
         self.root = root
         self.images = images
-        self.canvas = Canvas(root, width=3*images[0].width, height=images[0].height)
+        self.canvas = Canvas(root, width=3 * images[0].width, height=images[0].height)
         self.canvas.pack()
 
         # Display images side-by-side
@@ -13,7 +14,7 @@ class ImageViewer:
         for i, image in enumerate(images):
             photo = ImageTk.PhotoImage(image)
             self.photo_images.append(photo)
-            self.canvas.create_image(i*image.width, 0, anchor=NW, image=photo)
+            self.canvas.create_image(i * image.width, 0, anchor=NW, image=photo)
 
         # Bind mouse events for panning
         self.canvas.bind("<ButtonPress-2>", self.start_pan)
@@ -24,6 +25,33 @@ class ImageViewer:
         # Variables for panning
         self.start_x = None
         self.start_y = None
+
+        # Show seams checkbox
+        self.show_seams = BooleanVar(value=show_seams)
+        self.show_seams_checkbox = Checkbutton(root, text="Show Seams", variable=self.show_seams,
+                                               command=self.update_seams)
+        self.show_seams_checkbox.pack()
+
+        # Seam lines
+        self.seam_lines = []
+        self.update_seams()
+
+    def update_seams(self):
+        if self.show_seams.get():
+            # Calculate the x-coordinates of the seam lines
+            seam_xs = []
+            for i in range(len(self.images) - 1):
+                seam_xs.append((i + 1) * self.images[i].width)
+
+            # Create red lines on the canvas at the seam positions
+            for x in seam_xs:
+                line_id = self.canvas.create_line(x, 0, x, self.images[0].height, fill="red", width=2)
+                self.seam_lines.append(line_id)
+        else:
+            # Remove the seam lines from the canvas
+            for line_id in self.seam_lines:
+                self.canvas.delete(line_id)
+            self.seam_lines = []
 
     def start_pan(self, event):
         self.start_x = event.x
@@ -49,5 +77,13 @@ if __name__ == '__main__':
     # Create window and display images
     root = Tk()
     root.title("Carousel Image Viewer")
-    image_viewer = ImageViewer(root, images)
+    root.state('zoomed')  # Maximize the window on startup
+
+    # Create seam checkbox
+    show_seams = BooleanVar()
+    show_seams.set(False)
+    seam_checkbox = Checkbutton(root, text="Show Seams", variable=show_seams, command=lambda: image_viewer.draw_seams(show_seams.get()))
+    seam_checkbox.pack(side=TOP, padx=5, pady=5)
+
+    image_viewer = ImageViewer(root, images, show_seams=False)
     root.mainloop()
